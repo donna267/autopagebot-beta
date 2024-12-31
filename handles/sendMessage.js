@@ -11,6 +11,12 @@ const sendMessage = async (senderId, { text = '', attachment = null }, pageAcces
   const url = `https://graph.facebook.com/v21.0/me/messages`;
   const params = { access_token: pageAccessToken };
 
+  // Validate senderId
+  if (!senderId || typeof senderId !== 'string') {
+    console.error('Invalid senderId provided to sendMessage:', senderId);
+    return;
+  }
+
   try {
     // Turn on typing indicator
     await axiosPost(url, { recipient: { id: senderId }, sender_action: "typing_on" }, params);
