@@ -1,5 +1,5 @@
 const axios = require("axios");
-const { sendMessage } = require('../handles/sendMessage'); // Ensure the path is correct
+const { sendMessage } = require('../handles/sendMessage');
 
 module.exports = {
   name: "spotify",
@@ -8,6 +8,13 @@ module.exports = {
   author: "developer",
 
   async execute(senderId, args, pageAccessToken) {
+    if (typeof senderId !== 'string') {
+      console.error(`Invalid senderId provided:`, senderId);
+      return sendMessage(senderId, {
+        text: `Error: Invalid sender ID provided.`
+      }, pageAccessToken);
+    }
+
     const searchQuery = args.join(" ");
 
     if (!searchQuery) {
