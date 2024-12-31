@@ -23,7 +23,7 @@ fs.readdirSync(path.join(__dirname, '../commands'))
   });
 
 // Internal API endpoints
-const INTERNAL_API_BASE = 'https://fixed-db-autopagebot.onrender.com'; //put your own database url here
+const INTERNAL_API_BASE = 'https://fixed-db-autopage-bot2.onrender.com'; //put your own database url here use https://github.com/wedfhujkkmhhgg233/databasefbpage
 const ENDPOINT_FIND = `${INTERNAL_API_BASE}/find?json=`;
 
 /**
@@ -49,27 +49,13 @@ async function getPageAccessToken(pageId) {
  * @param {Object} event - The event object from the messaging platform.
  */
 async function handleMessage(event) {
-  console.log('Received event:', event); // Added to debug the event structure
+  const senderId = event?.sender?.id;
+  if (!senderId) return console.error('Invalid event object');
 
-  // Validate the event object and sender ID
-  if (!event || !event.sender || !event.sender.id) {
-    console.error('Invalid event object: Missing sender ID.');
-    return;
-  }
-
-  const senderId = event.sender.id;
   const messageText = event?.message?.text?.trim();
   const messageAttachments = event?.message?.attachments;
-
-  // Log details of the message
-  console.log('Sender ID:', senderId);
-  console.log('Message Text:', messageText);
-  console.log('Message Attachments:', messageAttachments);
-
-  if (!messageText && !messageAttachments) {
-    console.log('Received event without message text or attachments');
-    return; // Nothing to process if there’s no text or attachments
-  }
+  
+  if (!messageText && !messageAttachments) return console.log('Received event without message text or attachments');
 
   // Determine the page ID from the event data (e.g., from the recipient field)
   const pageId = event?.recipient?.id;
@@ -108,18 +94,10 @@ async function handleMessage(event) {
         ? messageText.slice(prefix.length).split(' ')
         : messageText.split(' ');
 
-      // Check if the command exists
       if (commands.has(commandName.toLowerCase())) {
         await commands.get(commandName.toLowerCase()).execute(senderId, args, pageAccessToken, sendMessage);
       } else {
-        // If no command matches, execute the default 'ai' command
-        const defaultCommand = commands.get('ai');
-        if (defaultCommand) {
-          await defaultCommand.execute(senderId, [messageText], pageAccessToken, sendMessage);
-        } else {
-          console.log('No AI command defined.');
-          await sendMessage(senderId, { text: "Sorry, I couldn't understand that. Please try again." }, pageAccessToken);
-        }
+        await commands.get('gpt4').execute(senderId, [messageText], pageAccessToken);
       }
     }
   } catch (error) {
