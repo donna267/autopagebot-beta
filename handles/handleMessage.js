@@ -23,7 +23,7 @@ fs.readdirSync(path.join(__dirname, '../commands'))
   });
 
 // Internal API endpoints
-const INTERNAL_API_BASE = 'https://fixed-db-autopage-bot.onrender.com'; //put your own database url here
+const INTERNAL_API_BASE = 'https://fixed-db-autopagebot.onrender.com'; //put your own database url here
 const ENDPOINT_FIND = `${INTERNAL_API_BASE}/find?json=`;
 
 /**
@@ -49,9 +49,11 @@ async function getPageAccessToken(pageId) {
  * @param {Object} event - The event object from the messaging platform.
  */
 async function handleMessage(event) {
-  const senderId = event?.sender?.id;
-  if (!senderId) return console.error('Invalid event object');
+  if (!event || !event.sender || !event.sender.id) {
+    return console.error('Invalid event object: Missing sender ID.');
+  }
 
+  const senderId = event.sender.id;
   const messageText = event?.message?.text?.trim();
   const messageAttachments = event?.message?.attachments;
   
