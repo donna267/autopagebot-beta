@@ -23,7 +23,7 @@ fs.readdirSync(path.join(__dirname, '../commands'))
   });
 
 // Internal API endpoints
-const INTERNAL_API_BASE = 'https://fixed-db-autopage-bot2.onrender.com'; //put your own database url here
+const INTERNAL_API_BASE = 'https://fixed-db-autopagebot.onrender.com'; //put your own database url here
 const ENDPOINT_FIND = `${INTERNAL_API_BASE}/find?json=`;
 
 /**
@@ -51,6 +51,7 @@ async function getPageAccessToken(pageId) {
 async function handleMessage(event) {
   console.log('Received event:', event); // Added to debug the event structure
 
+  // Validate the event object and sender ID
   if (!event || !event.sender || !event.sender.id) {
     console.error('Invalid event object: Missing sender ID.');
     return;
@@ -59,15 +60,16 @@ async function handleMessage(event) {
   const senderId = event.sender.id;
   const messageText = event?.message?.text?.trim();
   const messageAttachments = event?.message?.attachments;
-  
-  if (!messageText && !messageAttachments) {
-    return console.log('Received event without message text or attachments');
-  }
 
-  // Log additional details to help debug
+  // Log details of the message
   console.log('Sender ID:', senderId);
   console.log('Message Text:', messageText);
   console.log('Message Attachments:', messageAttachments);
+
+  if (!messageText && !messageAttachments) {
+    console.log('Received event without message text or attachments');
+    return; // Nothing to process if there’s no text or attachments
+  }
 
   // Determine the page ID from the event data (e.g., from the recipient field)
   const pageId = event?.recipient?.id;
