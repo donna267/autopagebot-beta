@@ -49,9 +49,11 @@ async function getPageAccessToken(pageId) {
  * @param {Object} event - The event object from the messaging platform.
  */
 async function handleMessage(event) {
-  const senderId = event?.sender?.id;
-  if (!senderId) return console.error('Invalid event object');
+  if (!event || !event.sender || !event.sender.id) {
+    return console.error('Invalid event object: Missing sender ID.');
+  }
 
+  const senderId = event.sender.id;
   const messageText = event?.message?.text?.trim();
   const messageAttachments = event?.message?.attachments;
   
