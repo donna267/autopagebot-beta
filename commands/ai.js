@@ -8,7 +8,7 @@ module.exports = {
   author: "Kiana",
 
   async execute(bot, args, authToken, event) {
-    if (!event?.sender?.id) {
+    if (!event || !event.sender || !event.sender.id) {
       console.error('Invalid event object: Missing sender ID.');
       sendMessage(bot, { text: 'Error: Missing sender ID.' }, authToken);
       return;
