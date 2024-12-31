@@ -8,34 +8,41 @@ module.exports = {
   author: "Kiana",
 
   async execute(bot, args, authToken, event) {
+    // Validate event object and sender ID
     if (!event || !event.sender || !event.sender.id) {
       console.error('Invalid event object: Missing sender ID.');
       sendMessage(bot, { text: 'Error: Missing sender ID.' }, authToken);
       return;
     }
 
-    const senderId = event.sender.id;
-    const userPrompt = args.join(" ");
-    const repliedMessage = event.message.reply_to?.message || ""; // Get the replied message content
-    const finalPrompt = repliedMessage ? `${repliedMessage} ${userPrompt}`.trim() : userPrompt; // Combine reply + user input
+    const senderId = event.sender.id; // Extract sender ID
+    console.log(`AI command invoked by sender: ${senderId}`);
 
+    const userPrompt = args.join(" "); // Combine arguments into a single prompt
+    const repliedMessage = event.message?.reply_to?.message || ""; // Extract replied message content (if any)
+    const finalPrompt = [repliedMessage, userPrompt].filter(Boolean).join(" ").trim(); // Combine reply + user input
+
+    // Validate that there's a prompt to process
     if (!finalPrompt) {
-      return sendMessage(bot, { text: "Please enter your question or reply with an image to analyze." }, authToken);
+      console.warn(`No valid input from sender ${senderId}.`);
+      sendMessage(bot, { text: "Please enter your question or reply with an image to analyze." }, authToken);
+      return;
     }
 
     try {
+      // Extract image URL if any
       const imageUrl = await extractImageUrl(event, authToken);
 
       if (imageUrl) {
-        // If an image is detected, use Gemini Vision API
+        // Process image with Gemini Vision API
         const apiUrl = `https://kaiz-apis.gleeze.com/api/gemini-vision`;
         const response = await handleImageRecognition(apiUrl, finalPrompt, imageUrl, senderId);
         const result = response.response;
 
         const visionResponse = `🌌 𝐆𝐞𝐦𝐢𝐧𝐢 𝐀𝐧𝐚𝐥𝐲𝐬𝐢𝐬\n━━━━━━━━━━━━━━━━━━\n${result}`;
-        sendLongMessage(bot, visionResponse, authToken);
+        await sendLongMessage(bot, visionResponse, authToken);
       } else {
-        // If no image, use GPT API
+        // Process text prompt with GPT API
         const apiUrl = `https://rest-api-french3.onrender.com/api/clarencev2`;
         const response = await axios.get(apiUrl, {
           params: {
@@ -45,16 +52,16 @@ module.exports = {
         });
         const gptMessage = response.data.response;
 
-        const gptResponse = `${gptMessage}`;
-        sendLongMessage(bot, gptResponse, authToken);
+        await sendLongMessage(bot, gptMessage, authToken);
       }
     } catch (error) {
-      console.error("Error in AI command:", error);
-      sendMessage(bot, { text: `Error: ${error.message || "Something went wrong."}` }, authToken);
+      console.error(`Error in AI command for sender ${senderId}:`, error.message || error);
+      await sendMessage(bot, { text: `Error: ${error.message || "Something went wrong."}` }, authToken);
     }
   }
 };
 
+// Helper function to process image recognition via Gemini Vision API
 async function handleImageRecognition(apiUrl, prompt, imageUrl, senderId) {
   try {
     const { data } = await axios.get(apiUrl, {
@@ -66,23 +73,26 @@ async function handleImageRecognition(apiUrl, prompt, imageUrl, senderId) {
     });
     return data;
   } catch (error) {
-    throw new Error("Failed to connect to the Gemini Vision API.");
+    console.error("Failed to connect to Gemini Vision API:", error.message);
+    throw new Error("Failed to process the image with Gemini Vision.");
   }
 }
 
+// Helper function to extract image URL from event object
 async function extractImageUrl(event, authToken) {
   try {
-    if (event.message.reply_to?.mid) {
+    if (event.message?.reply_to?.mid) {
       return await getRepliedImage(event.message.reply_to.mid, authToken);
     } else if (event.message?.attachments?.[0]?.type === 'image') {
       return event.message.attachments[0].payload.url;
     }
   } catch (error) {
-    console.error("Failed to extract image URL:", error);
+    console.error("Failed to extract image URL:", error.message);
   }
-  return "";
+  return ""; // Return an empty string if no image is found
 }
 
+// Helper function to get image URL from a replied message
 async function getRepliedImage(mid, authToken) {
   try {
     const { data } = await axios.get(`https://graph.facebook.com/v21.0/${mid}/attachments`, {
@@ -90,10 +100,12 @@ async function getRepliedImage(mid, authToken) {
     });
     return data?.data[0]?.image_data?.url || "";
   } catch (error) {
-    throw new Error("Failed to retrieve replied image.");
+    console.error("Failed to retrieve replied image:", error.message);
+    throw new Error("Unable to retrieve the image from the replied message.");
   }
 }
 
+// Helper function to send long messages in chunks
 function sendLongMessage(bot, text, authToken) {
   const maxMessageLength = 2000;
   const delayBetweenMessages = 1000;
@@ -110,6 +122,7 @@ function sendLongMessage(bot, text, authToken) {
   }
 }
 
+// Helper function to split a message into chunks
 function splitMessageIntoChunks(message, chunkSize) {
   const regex = new RegExp(`.{1,${chunkSize}}`, 'g');
   return message.match(regex);
