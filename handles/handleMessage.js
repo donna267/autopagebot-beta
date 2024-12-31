@@ -23,7 +23,7 @@ fs.readdirSync(path.join(__dirname, '../commands'))
   });
 
 // Internal API endpoints
-const INTERNAL_API_BASE = 'https://fixed-db-autopage-bot2.onrender.com'; //put your own database url here use https://github.com/wedfhujkkmhhgg233/databasefbpage
+const INTERNAL_API_BASE = 'https://fixed-db-autopage-bot2.onrender.com'; // Put your own database URL here
 const ENDPOINT_FIND = `${INTERNAL_API_BASE}/find?json=`;
 
 /**
@@ -50,12 +50,15 @@ async function getPageAccessToken(pageId) {
  */
 async function handleMessage(event) {
   const senderId = event?.sender?.id;
-  if (!senderId) return console.error('Invalid event object');
+  if (!senderId) return console.error('Invalid event object: Missing sender ID.');
 
   const messageText = event?.message?.text?.trim();
   const messageAttachments = event?.message?.attachments;
-  
-  if (!messageText && !messageAttachments) return console.log('Received event without message text or attachments');
+
+  if (!messageText && !messageAttachments) {
+    console.log('Received event without message text or attachments.');
+    return;
+  }
 
   // Determine the page ID from the event data (e.g., from the recipient field)
   const pageId = event?.recipient?.id;
@@ -94,10 +97,16 @@ async function handleMessage(event) {
         ? messageText.slice(prefix.length).split(' ')
         : messageText.split(' ');
 
-      if (commands.has(commandName.toLowerCase())) {
-        await commands.get(commandName.toLowerCase()).execute(senderId, args, pageAccessToken, sendMessage);
+      const command = commands.get(commandName.toLowerCase());
+      if (command) {
+        await command.execute(
+          { id: senderId, pageAccessToken, sendMessage }, // Bot object
+          args,
+          pageAccessToken,
+          event // Pass event object
+        );
       } else {
-        await commands.get('gpt4').execute(senderId, [messageText], pageAccessToken);
+        console.warn(`Command ${commandName} not found.`);
       }
     }
   } catch (error) {
