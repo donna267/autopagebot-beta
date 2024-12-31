@@ -7,58 +7,54 @@ module.exports = {
   role: 1,
   author: "Kiana",
 
-  async execute(bot, args, authToken, event) {
-    // Validate event object and sender ID
-    if (!event || !event.sender || !event.sender.id) {
-      console.error('Invalid event object: Missing sender ID.');
-      sendMessage(bot, { text: 'Error: Missing sender ID.' }, authToken);
-      return;
-    }
-
-    const senderId = event.sender.id; // Extract sender ID
-    console.log(`AI command invoked by sender: ${senderId}`);
-
-    const userPrompt = args.join(" "); // Combine arguments into a single prompt
-    const repliedMessage = event.message?.reply_to?.message || ""; // Extract replied message content (if any)
-    const finalPrompt = [repliedMessage, userPrompt].filter(Boolean).join(" ").trim(); // Combine reply + user input
-
-    // Validate that there's a prompt to process
-    if (!finalPrompt) {
-      console.warn(`No valid input from sender ${senderId}.`);
-      sendMessage(bot, { text: "Please enter your question or reply with an image to analyze." }, authToken);
-      return;
-    }
-
-    try {
-      // Extract image URL if any
-      const imageUrl = await extractImageUrl(event, authToken);
-
-      if (imageUrl) {
-        // Process image with Gemini Vision API
-        const apiUrl = `https://kaiz-apis.gleeze.com/api/gemini-vision`;
-        const response = await handleImageRecognition(apiUrl, finalPrompt, imageUrl, senderId);
-        const result = response.response;
-
-        const visionResponse = `🌌 𝐆𝐞𝐦𝐢𝐧𝐢 𝐀𝐧𝐚𝐥𝐲𝐬𝐢𝐬\n━━━━━━━━━━━━━━━━━━\n${result}`;
-        await sendLongMessage(bot, visionResponse, authToken);
-      } else {
-        // Process text prompt with GPT API
-        const apiUrl = `https://rest-api-french3.onrender.com/api/clarencev2`;
-        const response = await axios.get(apiUrl, {
-          params: {
-            prompt: finalPrompt,
-            uid: senderId
-          }
-        });
-        const gptMessage = response.data.response;
-
-        await sendLongMessage(bot, gptMessage, authToken);
-      }
-    } catch (error) {
-      console.error(`Error in AI command for sender ${senderId}:`, error.message || error);
-      await sendMessage(bot, { text: `Error: ${error.message || "Something went wrong."}` }, authToken);
-    }
+async execute(bot, args, authToken, event) {
+  // Validate event object and sender ID
+  if (!event || !event.sender || !event.sender.id) {
+    console.error('Invalid event object: Missing sender ID.');
+    await sendMessage(bot, { text: 'Error: Missing sender ID.' }, authToken);
+    return;
   }
+
+  const senderId = event.sender.id; // Extract sender ID
+  console.log(`AI command invoked by sender: ${senderId}`);
+
+  const userPrompt = args.join(" "); // Combine arguments into a single prompt
+  const repliedMessage = event.message?.reply_to?.message || ""; // Extract replied message content (if any)
+  const finalPrompt = [repliedMessage, userPrompt].filter(Boolean).join(" ").trim(); // Combine reply + user input
+
+  if (!finalPrompt) {
+    console.warn(`No valid input from sender ${senderId}.`);
+    await sendMessage(senderId, { text: "Please enter your question or reply with an image to analyze." }, authToken);
+    return;
+  }
+
+  try {
+    const imageUrl = await extractImageUrl(event, authToken);
+
+    if (imageUrl) {
+      const apiUrl = `https://kaiz-apis.gleeze.com/api/gemini-vision`;
+      const response = await handleImageRecognition(apiUrl, finalPrompt, imageUrl, senderId);
+      const result = response.response;
+
+      const visionResponse = `🌌 𝐆𝐞𝐦𝐢𝐧𝐢 𝐀𝐧𝐚𝐥𝐲𝐬𝐢𝐬\n━━━━━━━━━━━━━━━━━━\n${result}`;
+      await sendLongMessage(senderId, visionResponse, authToken);
+    } else {
+      const apiUrl = `https://rest-api-french3.onrender.com/api/clarencev2`;
+      const response = await axios.get(apiUrl, {
+        params: {
+          prompt: finalPrompt,
+          uid: senderId
+        }
+      });
+      const gptMessage = response.data.response;
+
+      await sendLongMessage(senderId, gptMessage, authToken);
+    }
+  } catch (error) {
+    console.error(`Error in AI command for sender ${senderId}:`, error.message || error);
+    await sendMessage(senderId, { text: `Error: ${error.message || "Something went wrong."}` }, authToken);
+  }
+}
 };
 
 // Helper function to process image recognition via Gemini Vision API
